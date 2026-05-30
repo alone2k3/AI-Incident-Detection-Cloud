@@ -1,0 +1,200 @@
+{% extends "base.html" %}
+{% set page = "dashboard" %}
+{% block page_title %}Cloud Monitoring Dashboard{% endblock %}
+
+{% block content %}
+<!-- Stat Row -->
+<div class="stat-row">
+  <div class="stat-card" style="--sc:#3b82f6">
+    <div class="stat-label"><span class="stat-icon">🖥️</span>CPU Usage</div>
+    <div class="stat-val" id="cpuVal">0%</div>
+    <div class="stat-delta" id="cpuDelta">Loading...</div>
+    <div class="prog"><div class="prog-fill" id="cpuBar" style="background:#3b82f6;width:0%"></div></div>
+  </div>
+  <div class="stat-card" style="--sc:#6366f1">
+    <div class="stat-label"><span class="stat-icon">💾</span>Memory Usage</div>
+    <div class="stat-val" id="memVal">0%</div>
+    <div class="stat-delta" id="memDelta">Loading...</div>
+    <div class="prog"><div class="prog-fill" id="memBar" style="background:#6366f1;width:0%"></div></div>
+  </div>
+  <div class="stat-card" style="--sc:#f59e0b">
+    <div class="stat-label"><span class="stat-icon">💿</span>Disk Usage</div>
+    <div class="stat-val" id="diskVal">0%</div>
+    <div class="stat-mini">Total space</div>
+    <div class="prog"><div class="prog-fill" id="diskBar" style="background:#f59e0b;width:0%"></div></div>
+  </div>
+  <div class="stat-card" style="--sc:#06b6d4">
+    <div class="stat-label"><span class="stat-icon">🌐</span>Network I/O</div>
+    <div class="stat-val" id="netVal" style="font-size:20px;margin-top:4px;">-- Mbps</div>
+    <div class="stat-mini">Live throughput</div>
+  </div>
+  <div class="stat-card" style="--sc:#10b981">
+    <div class="stat-label"><span class="stat-icon">❤️</span>System Health</div>
+    <div class="stat-val" id="healthVal" style="font-size:20px;margin-top:4px;color:#10b981">Good</div>
+    <div class="stat-mini" id="healthSub">All services running</div>
+  </div>
+</div>
+
+<!-- System Overview + Chart -->
+<div class="grid-65-35" style="margin-bottom:16px;">
+  <div class="card">
+    <div class="card-title">System Overview <span class="card-sub">Resource Usage Over Time</span></div>
+    <div class="chart-wrap"><canvas id="lineChart"></canvas></div>
+  </div>
+  <div class="card">
+    <div class="card-title">Resource Distribution</div>
+    <div style="position:relative;height:180px;"><canvas id="donutChart"></canvas></div>
+    <div id="donutLegend" style="margin-top:10px;font-size:11px;color:var(--muted);"></div>
+  </div>
+</div>
+
+<!-- Table + Processes + Alerts -->
+<div class="grid-65-35">
+  <div class="card">
+    <div class="card-title">
+      Resource Status Table
+      <a href="/monitoring" style="font-size:11px;color:var(--accent);">View Detailed →</a>
+    </div>
+    <table class="tbl">
+      <thead><tr><th>Resource</th><th>Status</th><th>Usage</th><th>Details</th></tr></thead>
+      <tbody id="overviewTable">
+        <tr><td colspan="4" style="text-align:center;color:var(--muted);padding:20px;">Loading...</td></tr>
+      </tbody>
+    </table>
+  </div>
+  <div class="card">
+    <div class="card-title">
+      Recent Alerts
+      <a href="/alerts-page" style="font-size:11px;color:var(--accent);">View All →</a>
+    </div>
+    <div id="recentAlerts" style="font-size:12px;">
+      <div style="color:var(--muted);text-align:center;padding:20px;">Loading alerts...</div>
+    </div>
+  </div>
+</div>
+{% endblock %}
+
+{% block scripts %}
+<script>
+var lineChart, donutChart;
+window.onload = function() {
+  var lCtx = document.getElementById('lineChart').getContext('2d');
+  lineChart = new Chart(lCtx, {
+    type:'line',
+    data:{ labels:[], datasets:[
+      {label:'CPU %',   data:[],borderColor:'#3b82f6',backgroundColor:'rgba(59,130,246,0.06)',tension:0.4,pointRadius:0,fill:true,borderWidth:2},
+      {label:'Memory %',data:[],borderColor:'#6366f1',backgroundColor:'rgba(99,102,241,0.06)',tension:0.4,pointRadius:0,fill:true,borderWidth:2},
+      {label:'Disk %',  data:[],borderColor:'#f59e0b',backgroundColor:'rgba(245,158,11,0.04)',tension:0.4,pointRadius:0,fill:true,borderWidth:2},
+    ]},
+    options:{responsive:true,maintainAspectRatio:false,animation:{duration:300},
+      plugins:{legend:{labels:{color:'#64748b',font:{size:11},boxWidth:10}}},
+      scales:{
+        x:{ticks:{color:'#64748b',font:{size:10},maxTicksLimit:8},grid:{color:'rgba(30,45,69,0.8)'}},
+        y:{min:0,max:100,ticks:{color:'#64748b',font:{size:10}},grid:{color:'rgba(30,45,69,0.8)'}}
+      }
+    }
+  });
+
+  var dCtx = document.getElementById('donutChart').getContext('2d');
+  donutChart = new Chart(dCtx, {
+    type:'doughnut',
+    data:{labels:['CPU','Memory','Disk','Free'],
+      datasets:[{data:[20,30,20,30],backgroundColor:['#3b82f6','#6366f1','#f59e0b','#1e2d45'],borderWidth:0}]},
+    options:{responsive:true,maintainAspectRatio:false,cutout:'72%',animation:{duration:300},
+      plugins:{legend:{display:false}}}
+  });
+
+  fetchAll();
+  setInterval(fetchAll, 3000);
+};
+
+async function fetchAll() {
+  try {
+    var r = await fetch('/api/metrics');
+    var d = await r.json();
+    if(d.error) return;
+
+    document.getElementById('cpuVal').textContent  = d.cpu.toFixed(1)+'%';
+    document.getElementById('memVal').textContent  = d.memory.toFixed(1)+'%';
+    document.getElementById('diskVal').textContent = d.disk.toFixed(1)+'%';
+    document.getElementById('netVal').textContent  = d.network.toFixed(1)+' MB';
+    document.getElementById('cpuBar').style.width  = d.cpu+'%';
+    document.getElementById('memBar').style.width  = d.memory+'%';
+    document.getElementById('diskBar').style.width = d.disk+'%';
+
+    var cpuColor = d.cpu>90?'#ef4444':d.cpu>75?'#f59e0b':'#10b981';
+    document.getElementById('cpuDelta').style.color = cpuColor;
+    document.getElementById('cpuDelta').textContent = d.cpu>90?'▲ Critical':d.cpu>75?'▲ High':'● Normal';
+    document.getElementById('memDelta').style.color = d.memory>80?'#ef4444':'#10b981';
+    document.getElementById('memDelta').textContent = d.memory>80?'▲ High':'● Normal';
+
+    var health = d.anomaly ? (d.severity==='CRITICAL'?'Critical':'Warning') : 'Good';
+    var hcolor = d.anomaly ? (d.severity==='CRITICAL'?'#ef4444':'#f59e0b') : '#10b981';
+    document.getElementById('healthVal').textContent = health;
+    document.getElementById('healthVal').style.color = hcolor;
+    document.getElementById('healthSub').textContent = d.anomaly ? d.message : 'All services running';
+
+    // Overview table
+    var rows = [
+      ['CPU',    d.cpu>90?'Critical':d.cpu>75?'Warning':'Normal',    d.cpu.toFixed(1)+'%',   '4 Core'],
+      ['Memory', d.memory>80?'Warning':'Normal', d.memory.toFixed(1)+'%', (d.memory/100*8).toFixed(1)+' / 8 GB'],
+      ['Disk',   'Normal',  d.disk.toFixed(1)+'%',  'System Drive'],
+      ['Network','Normal',  d.network.toFixed(1)+' MB','I/O Throughput'],
+    ];
+    document.getElementById('overviewTable').innerHTML = rows.map(function(r){
+      var cls = r[1]==='Critical'?'b-critical':r[1]==='Warning'?'b-warning':'b-normal';
+      var pct = parseFloat(r[2]);
+      var pc  = r[1]==='Critical'?'#ef4444':r[1]==='Warning'?'#f59e0b':'#10b981';
+      return '<tr><td style="font-weight:600;">'+r[0]+'</td>'+
+        '<td><span class="badge '+cls+'">'+r[1]+'</span></td>'+
+        '<td><div style="font-size:12px;margin-bottom:3px;">'+r[2]+'</div><div class="prog" style="width:120px"><div class="prog-fill" style="width:'+Math.min(pct,100)+'%;background:'+pc+'"></div></div></td>'+
+        '<td style="color:var(--muted)">'+r[3]+'</td></tr>';
+    }).join('');
+
+    // Charts
+    var hr = await fetch('/api/history');
+    var h  = await hr.json();
+    if(h.labels && h.labels.length>0){
+      lineChart.data.labels = h.labels;
+      lineChart.data.datasets[0].data = h.cpu;
+      lineChart.data.datasets[1].data = h.memory;
+      lineChart.data.datasets[2].data = h.disk;
+      lineChart.update('none');
+    }
+    var free = Math.max(0,100-d.cpu-d.memory/3-d.disk/4);
+    donutChart.data.datasets[0].data = [+d.cpu.toFixed(1),+d.memory.toFixed(1),+d.disk.toFixed(1),+free.toFixed(1)];
+    donutChart.update('none');
+    document.getElementById('donutLegend').innerHTML =
+      '<div style="display:flex;gap:12px;flex-wrap:wrap;">' +
+      ['CPU:'+d.cpu.toFixed(1)+'%','Mem:'+d.memory.toFixed(1)+'%','Disk:'+d.disk.toFixed(1)+'%'].map(function(t,i){
+        var c=['#3b82f6','#6366f1','#f59e0b'][i];
+        return '<span style="display:flex;align-items:center;gap:4px;"><span style="width:8px;height:8px;border-radius:50%;background:'+c+';display:inline-block"></span>'+t+'</span>';
+      }).join('') + '</div>';
+
+  } catch(e){ console.error(e); }
+
+  // Recent alerts
+  try {
+    var ir = await fetch('/api/incidents');
+    var incidents = await ir.json();
+    var el = document.getElementById('recentAlerts');
+    if(!incidents.length){
+      el.innerHTML='<div style="color:var(--muted);text-align:center;padding:20px;font-size:12px;">✓ No alerts detected</div>';
+    } else {
+      el.innerHTML = incidents.slice(0,4).map(function(i){
+        var ic = i.severity==='CRITICAL'?'🔴':'🟡';
+        var cls = i.severity==='CRITICAL'?'b-critical':'b-warning';
+        return '<div style="display:flex;align-items:flex-start;gap:8px;padding:8px 0;border-bottom:1px solid var(--border);">'+
+          '<span style="font-size:14px;flex-shrink:0;">'+ic+'</span>'+
+          '<div style="flex:1;min-width:0;">'+
+            '<div style="font-size:11px;font-weight:600;color:var(--text);margin-bottom:2px;">'+i.message.substring(0,50)+'</div>'+
+            '<div style="font-size:10px;color:var(--muted);">'+i.timestamp+'</div>'+
+          '</div>'+
+          '<span class="badge '+cls+'">'+i.severity+'</span>'+
+        '</div>';
+      }).join('');
+    }
+  } catch(e){}
+}
+</script>
+{% endblock %}

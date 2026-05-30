@@ -1,0 +1,181 @@
+{% extends "base.html" %}
+{% set page = "ai_detection" %}
+{% block page_title %}AI Detection Alert{% endblock %}
+{% block content %}
+
+<div id="anomalyBanner" style="display:none;background:rgba(239,68,68,0.1);border:1px solid rgba(239,68,68,0.3);border-radius:12px;padding:16px 20px;margin-bottom:18px;">
+  <div style="display:flex;align-items:center;gap:12px;">
+    <span style="font-size:28px;">⚠️</span>
+    <div>
+      <div style="font-size:16px;font-weight:700;color:#ef4444;">Anomaly Detected!</div>
+      <div style="font-size:12px;color:var(--muted);" id="bannerMsg">AI Engine has identified abnormal behavior</div>
+    </div>
+    <div style="margin-left:auto;display:flex;gap:24px;font-size:12px;">
+      <div><div style="color:var(--muted);margin-bottom:2px;">Detected At</div><div id="detectedAt" style="font-weight:600;">--</div></div>
+      <div><div style="color:var(--muted);margin-bottom:2px;">Model Used</div><div style="font-weight:600;">Isolation Forest</div></div>
+      <div><div style="color:var(--muted);margin-bottom:2px;">Alert ID</div><div style="font-weight:600;color:var(--accent);" id="alertId">--</div></div>
+    </div>
+  </div>
+</div>
+
+<div id="normalBanner" style="background:rgba(16,185,129,0.08);border:1px solid rgba(16,185,129,0.2);border-radius:12px;padding:14px 20px;margin-bottom:18px;">
+  <div style="display:flex;align-items:center;gap:10px;">
+    <span style="font-size:20px;">✅</span>
+    <div style="font-size:14px;font-weight:600;color:#10b981;">System Normal — AI Engine monitoring continuously</div>
+  </div>
+</div>
+
+<!-- Metric Cards -->
+<div style="display:grid;grid-template-columns:repeat(4,1fr);gap:12px;margin-bottom:18px;">
+  <div class="stat-card" style="--sc:#ef4444;text-align:center;">
+    <div style="font-size:11px;color:var(--muted);margin-bottom:6px;">Severity</div>
+    <div style="font-size:22px;font-weight:800;" id="aiSeverity">NORMAL</div>
+  </div>
+  <div class="stat-card" style="--sc:#3b82f6;text-align:center;">
+    <div style="font-size:11px;color:var(--muted);margin-bottom:6px;">Confidence Score</div>
+    <div style="font-size:26px;font-weight:800;color:#3b82f6;" id="aiConf">92.6%</div>
+  </div>
+  <div class="stat-card" style="--sc:#f59e0b;text-align:center;">
+    <div style="font-size:11px;color:var(--muted);margin-bottom:6px;">CPU Usage</div>
+    <div style="font-size:26px;font-weight:800;color:#f59e0b;" id="aiCpu">0%</div>
+  </div>
+  <div class="stat-card" style="--sc:#10b981;text-align:center;">
+    <div style="font-size:11px;color:var(--muted);margin-bottom:6px;">Status</div>
+    <div style="font-size:18px;font-weight:800;color:#10b981;" id="aiStatusBig">Open</div>
+  </div>
+</div>
+
+<div class="grid-65-35">
+  <!-- Anomaly Details -->
+  <div class="card">
+    <div class="card-title">Anomaly Details</div>
+    <table class="tbl" id="detailTable">
+      <tbody>
+        <tr><td style="color:var(--muted);width:160px;">Alert ID</td><td id="dtAlertId">ALRT-2024-00-001</td></tr>
+        <tr><td style="color:var(--muted);">Detected At</td><td id="dtTime">--</td></tr>
+        <tr><td style="color:var(--muted);">Metric</td><td>CPU Usage / Memory Usage</td></tr>
+        <tr><td style="color:var(--muted);">CPU Value</td><td id="dtCpu">--</td></tr>
+        <tr><td style="color:var(--muted);">Memory Value</td><td id="dtMem">--</td></tr>
+        <tr><td style="color:var(--muted);">Disk Value</td><td id="dtDisk">--</td></tr>
+        <tr><td style="color:var(--muted);">Threshold</td><td>CPU &gt;75% / Memory &gt;80%</td></tr>
+        <tr><td style="color:var(--muted);">Model Used</td><td>Isolation Forest</td></tr>
+        <tr><td style="color:var(--muted);">Description</td><td id="dtDesc" style="color:var(--muted);">System operating normally</td></tr>
+        <tr><td style="color:var(--muted);">Recommendation</td><td id="dtRec" style="color:#3b82f6;">Monitor system performance</td></tr>
+      </tbody>
+    </table>
+  </div>
+
+  <!-- Metric Chart -->
+  <div class="card">
+    <div class="card-title">Metric Comparison</div>
+    <div class="chart-wrap"><canvas id="aiChart"></canvas></div>
+    <div style="margin-top:10px;font-size:11px;color:var(--muted);display:flex;gap:12px;">
+      <span style="display:flex;align-items:center;gap:4px;"><span style="width:16px;height:2px;background:#3b82f6;display:inline-block;"></span>CPU Usage (%)</span>
+      <span style="display:flex;align-items:center;gap:4px;"><span style="width:16px;height:2px;background:#ef4444;border-top:2px dashed #ef4444;display:inline-block;"></span>Threshold (80%)</span>
+    </div>
+  </div>
+</div>
+
+<!-- Recent Anomaly Alerts Table -->
+<div class="card" style="margin-top:16px;">
+  <div class="card-title">Recent Anomaly Alerts <span class="card-sub" id="aiInsight" style="color:var(--muted);font-size:11px;font-weight:400;">AI monitoring active</span></div>
+  <table class="tbl">
+    <thead><tr><th>Alert ID</th><th>Metric</th><th>Severity</th><th>CPU%</th><th>MEM%</th><th>Detected At</th><th>Status</th></tr></thead>
+    <tbody id="aiAlertTable"><tr><td colspan="7" style="text-align:center;color:var(--muted);padding:20px;">Loading...</td></tr></tbody>
+  </table>
+</div>
+{% endblock %}
+
+{% block scripts %}
+<script>
+var aiChart;
+window.onload = function(){
+  var ctx = document.getElementById('aiChart').getContext('2d');
+  aiChart = new Chart(ctx,{
+    type:'line',
+    data:{labels:[],datasets:[
+      {label:'CPU %',data:[],borderColor:'#3b82f6',backgroundColor:'rgba(59,130,246,0.08)',tension:0.4,pointRadius:2,fill:true,borderWidth:2},
+      {label:'Threshold',data:[],borderColor:'#ef4444',borderDash:[5,5],pointRadius:0,fill:false,borderWidth:1.5}
+    ]},
+    options:{responsive:true,maintainAspectRatio:false,animation:{duration:300},
+      plugins:{legend:{display:false}},
+      scales:{
+        x:{ticks:{color:'#64748b',font:{size:10},maxTicksLimit:6},grid:{color:'rgba(30,45,69,0.8)'}},
+        y:{min:0,max:100,ticks:{color:'#64748b',font:{size:10}},grid:{color:'rgba(30,45,69,0.8)'}}
+      }
+    }
+  });
+  fetchAI();
+  setInterval(fetchAI,3000);
+};
+
+var _alertIdCounter = 1000;
+async function fetchAI(){
+  try{
+    var r = await fetch('/api/metrics');
+    var d = await r.json();
+    if(d.error) return;
+
+    document.getElementById('aiCpu').textContent = d.cpu.toFixed(1)+'%';
+    var sev = d.anomaly ? d.severity : 'NORMAL';
+    var sc  = sev==='CRITICAL'?'#ef4444':sev==='WARNING'?'#f59e0b':'#10b981';
+    document.getElementById('aiSeverity').textContent = sev;
+    document.getElementById('aiSeverity').style.color = sc;
+    document.getElementById('aiStatusBig').textContent = d.anomaly?'Open':'Normal';
+    document.getElementById('aiStatusBig').style.color = d.anomaly?'#ef4444':'#10b981';
+    document.getElementById('aiConf').textContent = d.anomaly ? '92.6%' : '99.1%';
+
+    var now = new Date().toLocaleString();
+    document.getElementById('dtTime').textContent = now;
+    document.getElementById('dtCpu').textContent  = d.cpu.toFixed(1)+'%';
+    document.getElementById('dtMem').textContent  = d.memory.toFixed(1)+'%';
+    document.getElementById('dtDisk').textContent = d.disk.toFixed(1)+'%';
+    document.getElementById('dtDesc').textContent = d.message;
+    document.getElementById('dtRec').textContent  = d.anomaly?'Investigate running processes and optimize workload':'Monitor system performance';
+
+    if(d.anomaly){
+      document.getElementById('anomalyBanner').style.display='block';
+      document.getElementById('normalBanner').style.display='none';
+      document.getElementById('bannerMsg').textContent = d.message;
+      document.getElementById('detectedAt').textContent = now;
+      document.getElementById('alertId').textContent = 'ALRT-'+Date.now().toString().slice(-6);
+      document.getElementById('dtAlertId').textContent = 'ALRT-'+Date.now().toString().slice(-6);
+    } else {
+      document.getElementById('anomalyBanner').style.display='none';
+      document.getElementById('normalBanner').style.display='block';
+    }
+
+    var hr = await fetch('/api/history');
+    var h  = await hr.json();
+    if(h.labels&&h.labels.length){
+      aiChart.data.labels = h.labels;
+      aiChart.data.datasets[0].data = h.cpu;
+      aiChart.data.datasets[1].data = h.labels.map(function(){return 80;});
+      aiChart.update('none');
+    }
+
+    var ir = await fetch('/api/incidents');
+    var inc = await ir.json();
+    var tb = document.getElementById('aiAlertTable');
+    if(!inc.length){
+      tb.innerHTML='<tr><td colspan="7" style="text-align:center;color:var(--muted);padding:20px;">No anomalies detected</td></tr>';
+    } else {
+      tb.innerHTML = inc.slice(0,8).map(function(i,idx){
+        var cls = i.severity==='CRITICAL'?'b-critical':'b-warning';
+        var st  = i.status==='open'?'b-open':'b-resolved';
+        return '<tr>'+
+          '<td style="color:var(--accent);font-family:monospace;font-size:11px;">ALRT-'+String(1000+idx).padStart(4,'0')+'</td>'+
+          '<td>CPU / Memory</td>'+
+          '<td><span class="badge '+cls+'">'+i.severity+'</span></td>'+
+          '<td>'+(i.cpu!=null?i.cpu.toFixed(1):'-')+'%</td>'+
+          '<td>'+(i.memory!=null?i.memory.toFixed(1):'-')+'%</td>'+
+          '<td style="color:var(--muted);font-size:11px;">'+i.timestamp+'</td>'+
+          '<td><span class="badge '+st+'">'+i.status+'</span></td>'+
+        '</tr>';
+      }).join('');
+    }
+    document.getElementById('aiInsight').textContent = d.anomaly?'⚠ AI has detected unusual behavior — investigate immediately':'✓ Normal behavior patterns detected';
+  }catch(e){console.error(e);}
+}
+</script>
+{% endblock %}

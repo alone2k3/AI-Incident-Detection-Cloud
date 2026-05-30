@@ -1,0 +1,167 @@
+{% extends "base.html" %}
+{% set page = "alerts" %}
+{% block page_title %}Alert Notifications{% endblock %}
+{% block content %}
+
+<!-- Summary cards -->
+<div style="display:grid;grid-template-columns:repeat(4,1fr);gap:12px;margin-bottom:18px;">
+  <div class="stat-card" style="--sc:#64748b;">
+    <div style="display:flex;align-items:center;gap:8px;">
+      <span style="font-size:20px;">🔔</span>
+      <div><div style="font-size:10px;color:var(--muted);">Total Alerts</div><div style="font-size:24px;font-weight:800;" id="aTot">0</div><div style="font-size:10px;color:var(--muted);">All Time</div></div>
+    </div>
+  </div>
+  <div class="stat-card" style="--sc:#ef4444;">
+    <div style="display:flex;align-items:center;gap:8px;">
+      <span style="font-size:20px;">🔴</span>
+      <div><div style="font-size:10px;color:var(--muted);">Critical</div><div style="font-size:24px;font-weight:800;color:#ef4444;" id="aCrit">0</div><div style="font-size:10px;color:var(--muted);">Needs Immediate Action</div></div>
+    </div>
+  </div>
+  <div class="stat-card" style="--sc:#f59e0b;">
+    <div style="display:flex;align-items:center;gap:8px;">
+      <span style="font-size:20px;">🟡</span>
+      <div><div style="font-size:10px;color:var(--muted);">Warning</div><div style="font-size:24px;font-weight:800;color:#f59e0b;" id="aWarn">0</div><div style="font-size:10px;color:var(--muted);">Requires Attention</div></div>
+    </div>
+  </div>
+  <div class="stat-card" style="--sc:#10b981;">
+    <div style="display:flex;align-items:center;gap:8px;">
+      <span style="font-size:20px;">✅</span>
+      <div><div style="font-size:10px;color:var(--muted);">Resolved</div><div style="font-size:24px;font-weight:800;color:#10b981;" id="aRes">0</div><div style="font-size:10px;color:var(--muted);">This Session</div></div>
+    </div>
+  </div>
+</div>
+
+<div class="grid-65-35">
+  <!-- All Alerts Table -->
+  <div class="card">
+    <div class="card-title">
+      All Alerts
+      <div style="display:flex;gap:8px;">
+        <button class="btn btn-sm" onclick="loadAlerts()">↻ Refresh</button>
+        <button class="btn btn-sm btn-primary" id="emailBtn" onclick="testEmail()">📧 Test Email</button>
+        <span id="emailStatus" style="font-size:11px;color:#10b981;display:none;align-self:center;"></span>
+      </div>
+    </div>
+    <table class="tbl">
+      <thead><tr><th>Alert ID</th><th>Severity</th><th>Alert Message</th><th>CPU%</th><th>Time</th><th>Status</th><th>Action</th></tr></thead>
+      <tbody id="alertTable"><tr><td colspan="7" style="text-align:center;color:var(--muted);padding:20px;">Loading...</td></tr></tbody>
+    </table>
+  </div>
+
+  <!-- Alert Detail Panel -->
+  <div class="card" id="detailPanel">
+    <div class="card-title">Alert Details</div>
+    <div id="detailContent" style="font-size:12px;">
+      <div style="text-align:center;color:var(--muted);padding:30px;">
+        <div style="font-size:28px;margin-bottom:8px;">👆</div>
+        Click an alert row to view details
+      </div>
+    </div>
+    <div style="margin-top:14px;padding-top:14px;border-top:1px solid var(--border);display:none;" id="detailActions">
+      <div style="font-size:11px;color:var(--muted);margin-bottom:8px;">Recommended Actions</div>
+      <div style="font-size:12px;color:var(--text);line-height:1.8;" id="recActions">—</div>
+      <div style="margin-top:12px;display:flex;gap:8px;">
+        <button class="btn btn-sm btn-primary" id="resolveBtn" onclick="resolveSelected()">✓ Resolve</button>
+        <button class="btn btn-sm" onclick="sendPromptFromAlert()">🔍 Investigate ↗</button>
+      </div>
+    </div>
+  </div>
+</div>
+{% endblock %}
+
+{% block scripts %}
+<script>
+var selectedId = null;
+
+async function loadAlerts(){
+  try{
+    var ir = await fetch('/api/incidents');
+    var sr = await fetch('/api/stats');
+    var inc = await ir.json();
+    var st  = await sr.json();
+
+    document.getElementById('aTot').textContent  = st.total||0;
+    document.getElementById('aCrit').textContent = st.critical||0;
+    document.getElementById('aWarn').textContent = st.warning||0;
+    var res = inc.filter(function(i){return i.status==='resolved';}).length;
+    document.getElementById('aRes').textContent  = res;
+
+    var tb = document.getElementById('alertTable');
+    if(!inc.length){
+      tb.innerHTML='<tr><td colspan="7" style="text-align:center;color:var(--muted);padding:24px;">✓ No alerts — system healthy</td></tr>';
+      return;
+    }
+    tb.innerHTML = inc.map(function(i,idx){
+      var cls = i.severity==='CRITICAL'?'b-critical':'b-warning';
+      var st2 = i.status==='open'?'b-open':'b-resolved';
+      var ic  = i.severity==='CRITICAL'?'🔴':'🟡';
+      return '<tr style="cursor:pointer;" onclick="showDetail('+JSON.stringify(i).replace(/"/g,"'")+')">'+
+        '<td style="color:var(--accent);font-family:monospace;font-size:11px;">#'+i.id+'</td>'+
+        '<td><span class="badge '+cls+'">'+ic+' '+i.severity+'</span></td>'+
+        '<td style="color:var(--muted);max-width:200px;overflow:hidden;white-space:nowrap;text-overflow:ellipsis;">'+i.message+'</td>'+
+        '<td>'+(i.cpu!=null?i.cpu.toFixed(1):'-')+'%</td>'+
+        '<td style="color:var(--muted);font-size:11px;">'+i.timestamp+'</td>'+
+        '<td><span class="badge '+st2+'">'+i.status+'</span></td>'+
+        '<td>'+(i.status==='open'?'<button class="btn btn-sm" onclick="event.stopPropagation();resolveOne('+i.id+')">Resolve</button>':'—')+'</td>'+
+      '</tr>';
+    }).join('');
+  }catch(e){console.error(e);}
+}
+
+function showDetail(i){
+  selectedId = i.id;
+  var cls = i.severity==='CRITICAL'?'b-critical':'b-warning';
+  var col = i.severity==='CRITICAL'?'#ef4444':'#f59e0b';
+  document.getElementById('detailContent').innerHTML =
+    '<div style="background:'+col+'18;border:1px solid '+col+'44;border-radius:8px;padding:12px;margin-bottom:14px;">'+
+    '<div style="font-weight:700;color:'+col+';font-size:13px;">'+i.severity+' Alert #'+i.id+'</div>'+
+    '<div style="font-size:11px;color:var(--muted);margin-top:4px;">'+i.message+'</div>'+
+    '</div>'+
+    '<table class="tbl"><tbody>'+
+    '<tr><td style="color:var(--muted)">Alert ID</td><td>#'+i.id+'</td></tr>'+
+    '<tr><td style="color:var(--muted)">Detected At</td><td>'+i.timestamp+'</td></tr>'+
+    '<tr><td style="color:var(--muted)">CPU Usage</td><td style="color:'+col+';">'+(i.cpu!=null?i.cpu.toFixed(1):'-')+'%</td></tr>'+
+    '<tr><td style="color:var(--muted)">Memory</td><td>'+(i.memory!=null?i.memory.toFixed(1):'-')+'%</td></tr>'+
+    '<tr><td style="color:var(--muted)">Disk</td><td>'+(i.disk!=null?i.disk.toFixed(1):'-')+'%</td></tr>'+
+    '<tr><td style="color:var(--muted)">Status</td><td><span class="badge '+(i.status==='open'?'b-open':'b-resolved')+'">'+i.status+'</span></td></tr>'+
+    '</tbody></table>';
+  document.getElementById('recActions').textContent = i.severity==='CRITICAL'
+    ? '• Check running processes\n• Optimize high CPU usage\n• Scale resources if required'
+    : '• Monitor the situation\n• Check for memory leaks\n• Review active processes';
+  document.getElementById('detailActions').style.display = 'block';
+  document.getElementById('resolveBtn').style.display = i.status==='open'?'inline-block':'none';
+}
+
+async function resolveOne(id){
+  await fetch('/api/resolve/'+id,{method:'POST'});
+  loadAlerts();
+}
+async function resolveSelected(){
+  if(!selectedId) return;
+  await fetch('/api/resolve/'+selectedId,{method:'POST'});
+  loadAlerts();
+  document.getElementById('detailActions').style.display='none';
+}
+function sendPromptFromAlert(){
+  if(typeof sendPrompt==='function') sendPrompt('What should I do when I get a CRITICAL CPU alert?');
+}
+
+async function testEmail(){
+  var btn=document.getElementById('emailBtn'),st=document.getElementById('emailStatus');
+  btn.disabled=true; btn.textContent='📧 Sending...'; st.style.display='none';
+  try{
+    await fetch('/api/test-email',{method:'POST'});
+    btn.textContent='📧 Test Email'; btn.disabled=false;
+    st.textContent='✅ Sent! Check inbox.'; st.style.display='inline';
+    setTimeout(function(){st.style.display='none';},4000);
+  }catch(e){
+    btn.textContent='📧 Test Email'; btn.disabled=false;
+    st.textContent='❌ Failed'; st.style.color='#ef4444'; st.style.display='inline';
+    setTimeout(function(){st.style.display='none';},3000);
+  }
+}
+
+loadAlerts();
+setInterval(loadAlerts, 8000);
+</script>
+{% endblock %}

@@ -1,0 +1,59 @@
+{% extends "base.html" %}
+{% set page = "incidents" %}
+{% block page_title %}Incident Report{% endblock %}
+{% block content %}
+
+<div style="display:grid;grid-template-columns:repeat(4,1fr);gap:12px;margin-bottom:18px;">
+  <div class="stat-card" style="--sc:#3b82f6;"><div style="font-size:10px;color:var(--muted);">Total Incidents</div><div style="font-size:28px;font-weight:800;" id="iTot">0</div></div>
+  <div class="stat-card" style="--sc:#ef4444;"><div style="font-size:10px;color:var(--muted);">Critical</div><div style="font-size:28px;font-weight:800;color:#ef4444;" id="iCrit">0</div></div>
+  <div class="stat-card" style="--sc:#f59e0b;"><div style="font-size:10px;color:var(--muted);">Warnings</div><div style="font-size:28px;font-weight:800;color:#f59e0b;" id="iWarn">0</div></div>
+  <div class="stat-card" style="--sc:#10b981;"><div style="font-size:10px;color:var(--muted);">Resolved</div><div style="font-size:28px;font-weight:800;color:#10b981;" id="iRes">0</div></div>
+</div>
+
+<div class="card">
+  <div class="card-title">
+    Incident Log
+    <button class="btn btn-sm" onclick="loadIncidents()">↻ Refresh</button>
+  </div>
+  <table class="tbl">
+    <thead><tr><th>#</th><th>Timestamp</th><th>CPU%</th><th>MEM%</th><th>DISK%</th><th>Severity</th><th>Message</th><th>Status</th><th>Action</th></tr></thead>
+    <tbody id="incTable"><tr><td colspan="9" style="text-align:center;color:var(--muted);padding:24px;">Loading...</td></tr></tbody>
+  </table>
+</div>
+{% endblock %}
+
+{% block scripts %}
+<script>
+async function loadIncidents(){
+  try{
+    var ir=await fetch('/api/incidents'), sr=await fetch('/api/stats');
+    var inc=await ir.json(), st=await sr.json();
+    document.getElementById('iTot').textContent  = st.total||0;
+    document.getElementById('iCrit').textContent = st.critical||0;
+    document.getElementById('iWarn').textContent = st.warning||0;
+    document.getElementById('iRes').textContent  = inc.filter(function(i){return i.status==='resolved';}).length;
+
+    var tb=document.getElementById('incTable');
+    if(!inc.length){tb.innerHTML='<tr><td colspan="9" style="text-align:center;color:var(--muted);padding:24px;">✓ No incidents</td></tr>';return;}
+    tb.innerHTML=inc.map(function(i){
+      var cls=i.severity==='CRITICAL'?'b-critical':'b-warning';
+      var st2=i.status==='open'?'b-open':'b-resolved';
+      return '<tr>'+
+        '<td style="color:var(--accent);font-family:monospace;">#'+i.id+'</td>'+
+        '<td style="color:var(--muted);font-size:11px;">'+i.timestamp+'</td>'+
+        '<td>'+(i.cpu!=null?i.cpu.toFixed(1):'-')+'%</td>'+
+        '<td>'+(i.memory!=null?i.memory.toFixed(1):'-')+'%</td>'+
+        '<td>'+(i.disk!=null?i.disk.toFixed(1):'-')+'%</td>'+
+        '<td><span class="badge '+cls+'">'+i.severity+'</span></td>'+
+        '<td style="color:var(--muted);max-width:240px;overflow:hidden;white-space:nowrap;text-overflow:ellipsis;">'+i.message+'</td>'+
+        '<td><span class="badge '+st2+'">'+i.status+'</span></td>'+
+        '<td>'+(i.status==='open'?'<button class="btn btn-sm" onclick="res('+i.id+')">Resolve</button>':'—')+'</td>'+
+      '</tr>';
+    }).join('');
+  }catch(e){console.error(e);}
+}
+async function res(id){await fetch('/api/resolve/'+id,{method:'POST'});loadIncidents();}
+loadIncidents();
+setInterval(loadIncidents,8000);
+</script>
+{% endblock %}

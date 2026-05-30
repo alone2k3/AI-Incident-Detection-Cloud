@@ -1,0 +1,129 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>AI Incident Detection & Response System</title>
+<style>
+*,*::before,*::after{box-sizing:border-box;margin:0;padding:0;}
+:root{--bg:#0a0f1e;--surface:#111827;--accent:#3b82f6;--text:#e2e8f0;--muted:#64748b;--border:#1e2d45;}
+body{background:var(--bg);color:var(--text);min-height:100vh;display:flex;font-family:'Segoe UI',system-ui,sans-serif;}
+
+.left-panel{
+  flex:1;background:linear-gradient(135deg,#0d1426 0%,#0f1f3d 50%,#091428 100%);
+  display:flex;flex-direction:column;align-items:center;justify-content:center;
+  padding:48px;position:relative;overflow:hidden;
+}
+.left-panel::before{
+  content:'';position:absolute;inset:0;
+  background:radial-gradient(circle at 30% 50%,rgba(59,130,246,0.12) 0%,transparent 60%);
+}
+.left-content{position:relative;z-index:1;text-align:center;max-width:400px;}
+.brand{display:flex;align-items:center;gap:12px;justify-content:center;margin-bottom:32px;}
+.brand-icon{width:48px;height:48px;background:linear-gradient(135deg,#3b82f6,#6366f1);border-radius:12px;display:flex;align-items:center;justify-content:center;font-size:22px;}
+.brand-name{font-size:13px;font-weight:800;letter-spacing:0.5px;text-align:left;line-height:1.4;}
+.brand-sub{font-size:10px;color:#64748b;letter-spacing:1px;text-transform:uppercase;}
+.hero-title{font-size:28px;font-weight:800;line-height:1.3;margin-bottom:12px;}
+.hero-title span{color:#3b82f6;}
+.hero-sub{font-size:13px;color:#64748b;line-height:1.7;margin-bottom:32px;}
+
+.cloud-visual{
+  width:200px;height:200px;margin:0 auto 24px;
+  background:radial-gradient(circle,rgba(59,130,246,0.15) 0%,transparent 70%);
+  border-radius:50%;display:flex;align-items:center;justify-content:center;
+  font-size:80px;animation:float 4s ease-in-out infinite;
+}
+@keyframes float{0%,100%{transform:translateY(0);}50%{transform:translateY(-12px);}}
+
+.feature-pills{display:flex;flex-wrap:wrap;gap:8px;justify-content:center;}
+.pill{background:rgba(59,130,246,0.1);border:1px solid rgba(59,130,246,0.2);padding:5px 12px;border-radius:20px;font-size:11px;color:#93c5fd;}
+
+.right-panel{width:460px;display:flex;flex-direction:column;align-items:center;justify-content:center;padding:48px;background:var(--bg);}
+.login-card{width:100%;max-width:380px;}
+
+.lock-icon{width:64px;height:64px;background:rgba(59,130,246,0.1);border:2px solid rgba(59,130,246,0.2);border-radius:50%;display:flex;align-items:center;justify-content:center;font-size:28px;margin:0 auto 20px;}
+h2{text-align:center;font-size:22px;font-weight:700;margin-bottom:6px;}
+.login-sub{text-align:center;color:var(--muted);font-size:13px;margin-bottom:28px;}
+
+label{display:block;font-size:11px;font-weight:600;letter-spacing:0.8px;text-transform:uppercase;color:var(--muted);margin-bottom:6px;}
+.input-wrap{position:relative;margin-bottom:18px;}
+.input-icon{position:absolute;left:12px;top:50%;transform:translateY(-50%);font-size:15px;opacity:0.5;}
+input[type=text],input[type=password]{
+  width:100%;padding:11px 14px 11px 38px;
+  background:var(--surface);border:1px solid var(--border);border-radius:8px;
+  color:var(--text);font-size:14px;font-family:inherit;outline:none;
+  transition:border-color 0.2s;
+}
+input:focus{border-color:var(--accent);box-shadow:0 0 0 3px rgba(59,130,246,0.1);}
+input::placeholder{color:var(--muted);}
+
+.login-btn{
+  width:100%;padding:12px;background:var(--accent);border:none;border-radius:8px;
+  color:#fff;font-size:14px;font-weight:700;cursor:pointer;font-family:inherit;
+  transition:opacity 0.2s;display:flex;align-items:center;justify-content:center;gap:8px;
+  margin-top:4px;
+}
+.login-btn:hover{opacity:0.88;}
+
+.error-box{background:rgba(239,68,68,0.1);border:1px solid rgba(239,68,68,0.3);color:#ef4444;padding:10px 14px;border-radius:8px;font-size:13px;margin-bottom:16px;}
+.divider{text-align:center;color:var(--muted);font-size:12px;margin:16px 0;}
+.contact-link{text-align:center;font-size:12px;color:var(--muted);}
+.contact-link a{color:var(--accent);}
+.footer{text-align:center;color:var(--muted);font-size:11px;margin-top:28px;}
+</style>
+</head>
+<body>
+
+<div class="left-panel">
+  <div class="left-content">
+    <div class="brand">
+      <div class="brand-icon">🛡️</div>
+      <div>
+        <div class="brand-name">AI INCIDENT DETECTION</div>
+        <div class="brand-sub">& Response System</div>
+      </div>
+    </div>
+    <div class="cloud-visual">☁️</div>
+    <div class="hero-title">AI-Based Incident Detection<br>& <span>Response System</span><br>for Cloud Applications</div>
+    <div class="hero-sub">Intelligent Monitoring. Faster Response.<br>Better Reliability.</div>
+    <div class="feature-pills">
+      <span class="pill">🤖 AI Detection</span>
+      <span class="pill">⚡ Real-time Alerts</span>
+      <span class="pill">📊 Live Dashboard</span>
+      <span class="pill">📧 Email Alerts</span>
+    </div>
+  </div>
+</div>
+
+<div class="right-panel">
+  <div class="login-card">
+    <div class="lock-icon">🔒</div>
+    <h2>Welcome Back!</h2>
+    <div class="login-sub">Sign in to access your dashboard</div>
+
+    {% if error %}
+    <div class="error-box">⚠ {{ error }}</div>
+    {% endif %}
+
+    <form method="POST">
+      <label>Username</label>
+      <div class="input-wrap">
+        <span class="input-icon">👤</span>
+        <input type="text" name="username" placeholder="Enter your username" required>
+      </div>
+      <label>Password</label>
+      <div class="input-wrap">
+        <span class="input-icon">🔑</span>
+        <input type="password" name="password" placeholder="Enter your password" required>
+      </div>
+      <button type="submit" class="login-btn">⟶ Login</button>
+    </form>
+
+    <div class="divider">OR</div>
+    <div class="contact-link">Don't have an account? <a href="#">Contact Administrator</a></div>
+    <div class="footer">© 2024 AI Incident Detection & Response System. All rights reserved.</div>
+  </div>
+</div>
+
+</body>
+</html>
